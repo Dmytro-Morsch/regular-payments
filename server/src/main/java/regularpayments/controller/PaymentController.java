@@ -20,6 +20,12 @@ public class PaymentController {
         return ResponseEntity.ok(payment);
     }
 
+    @GetMapping("/api/payments")
+    public ResponseEntity<?> getPayments() {
+        List<Payment> payments = paymentService.findAll();
+        return ResponseEntity.ok(payments);
+    }
+
     @GetMapping("/api/payments/inn/{inn}")
     public ResponseEntity<?> getPaymentsByInn(@PathVariable String inn) {
         List<Payment> payments = paymentService.findByPayerInn(inn);

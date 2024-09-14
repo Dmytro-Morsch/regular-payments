@@ -31,6 +31,10 @@ public class PaymentService {
         createTransaction(payment);
     }
 
+    public List<Payment> findAll() {
+        return (List<Payment>) paymentRepository.findAll();
+    }
+
     public List<Payment> findByPayerInn(String payerInn) {
         return paymentRepository.findByPayerInn(payerInn);
     }
