@@ -1,6 +1,8 @@
 package regularpayments.service;
 
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import regularpayments.model.*;
@@ -16,6 +18,8 @@ import java.util.Optional;
 @Transactional
 public class PaymentService {
 
+    private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
+
     @Autowired
     private PaymentRepository paymentRepository;
 
@@ -28,18 +32,22 @@ public class PaymentService {
     public void createPayment(Payment payment) {
         paymentValidator.validate(payment);
         paymentRepository.save(payment);
+        log.info("Created new payment {}", payment.getId());
         createTransaction(payment);
     }
 
     public List<Payment> findAll() {
+        log.debug("Find all payments");
         return (List<Payment>) paymentRepository.findAll();
     }
 
     public List<Payment> findByPayerInn(String payerInn) {
+        log.debug("Find payments by payer INN {}", payerInn);
         return paymentRepository.findByPayerInn(payerInn);
     }
 
     public List<Payment> findByPayeeOkpo(String payeeOkpo) {
+        log.debug("Find payments by payee OKPO {}", payeeOkpo);
         return paymentRepository.findByPayeeOkpo(payeeOkpo);
     }
 
@@ -55,10 +63,12 @@ public class PaymentService {
         }
         transaction.setStatus(Status.S);
         paymentTransactionRepository.save(transaction);
+        log.info("Reversed transaction {} of payment {}", transactionId, paymentId);
         return transaction;
     }
 
     public List<PaymentTransaction> findPaymentTransactions(Long paymentId) {
+        log.debug("Find all payment {} transactions", paymentId);
         Payment payment = getPayment(paymentId);
         return paymentTransactionRepository.findByPayment(payment);
     }
@@ -69,6 +79,7 @@ public class PaymentService {
     }
 
     public boolean isTransactionNeeded(Long paymentId) {
+        log.debug("Checking if transaction needed for payment {}", paymentId);
         Payment payment = getPayment(paymentId);
         List<PaymentTransaction> transactions = paymentTransactionRepository.findByPayment(payment);
 
@@ -90,7 +101,13 @@ public class PaymentService {
                 .filter(transaction -> transaction.getStatus() == Status.A)
                 .count();
 
-        return actualTransactionCount < requiredTransactionCount;
+        boolean isNeeded = actualTransactionCount < requiredTransactionCount;
+        if (isNeeded) {
+            log.debug("New transaction is needed for payment {}", paymentId);
+        } else {
+            log.debug("New transaction is not needed for payment {}", paymentId);
+        }
+        return isNeeded;
     }
 
     private PaymentTransaction createTransaction(Payment payment) {
@@ -100,6 +117,7 @@ public class PaymentService {
         paymentTransaction.setStatus(Status.A);
         paymentTransaction.setAmount(payment.getPaymentAmount());
         paymentTransactionRepository.save(paymentTransaction);
+        log.info("Create new transaction for payment {}", payment.getId());
         return paymentTransaction;
     }
 
